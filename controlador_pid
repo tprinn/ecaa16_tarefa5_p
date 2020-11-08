@@ -33,7 +33,14 @@ scan = LaserScan()
 rospy.init_node('cmd_node')
 #-----------------------------------------------------------------------------------
 
-#FUNCAO QUE RETORNA ANGULO YAW------------------------------------------------------
+
+#a média da soma dos numeros das matriculas dos membros deu 24,75. Arredondou-se a frequencia para 25 vezes por segundo  
+timer = rospy.Timer(rospy.Duration(0.25), timerCallBack)
+TempoTotal += timer
+dt = TempoTotal - timer 
+
+
+#FUNCAO QUE RETORNA ANGULO------------------------------------------------------
 def getAngle(msg):
   quaternion = msg.pose.pose.orientation 
   quat = [quaternion.x, quaternion.y, quaternion.z, quaternion.]
@@ -52,10 +59,10 @@ def scanCallBack(msg):
   scan = msg
 #-----------------------------------------------------------------------------------
 
-#TIMER - CONTROLE DO LOOP--------------------------------------------------------------- 
+#TIMER - CONTROLE DO LOOP----------------------------------------------------------- 
 def timerCallBack(event):
 
-  """
+  #ANGULO-----------------------------------------------------------
   yaw = getAngle(odom)
   setpoint = 120
   erro = (setpoint - yaw)
@@ -65,26 +72,33 @@ def timerCallBack(event):
         erro += 360
     else:
         erro -= 360
-  """
+  
   
     
-  """
-  #distancia do robo ate o setpoint
+  #DISTANCIA-----------------------------------------------------------
   setpoint = (-1,-1)
   dist = odom.pose.pose.position
   dist = setpoint[0] - position.x #math.sqrt((setpoint[0]-position.x)**2 + (setpoint[1]-position.y)**2)
   erro = dist
-  """
+  if dist > 0:
+    erro = -(setpoint - dist)  
+    P = kp*erro
+    #I = I + erro*ki
+    I += (erro*ki)*dt
+    D = ((lastDist - dist)*kd)*dt
+    lastDist = dsit
+    control = P+I+D
+    if control > 1:
+       control = 1
+    elif control < -1:
+       control = -1     
+  else:
+    control = 0
   
   
-  #a média da soma dos numeros das matriculas dos membros deu 24,75. Arredondou-se a frequencia para 25 vezes por segundo  
-  timer = rospy.Timer(rospy.Duration(0.25), timerCallBack)
-  TempoTotal += timer
-  dt = TempoTotal - timer  
   
   
-  """
-  #o setpoint pode ser a distância que quer que o robo fique de um obstaculo
+  #OBSTACULO-----------------------------------------------------------
   setpoint = 0.5
   scan_len = len(scan.ranges) 
 
@@ -100,16 +114,17 @@ def timerCallBack(event):
     if control > 1:
        control = 1
     elif control < -1:
-       control = -1
-       
+       control = -1       
   else:
     control = 0
- """
+ 
  
   msg = Twist()
   msg.angular.z = control
   pub.publish(msg)
 #-----------------------------------------------------------------------------------
+
+
 
 #PUBLISHER E SUBSCRIBER-------------------------------------------------------------
 pub = rospy.Publisher('/cmd_vel', Twist, queue_size=1)
