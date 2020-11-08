@@ -1,0 +1,76 @@
+import rospy
+from geometry_msgs.msg import Twist
+from nav_msgs.msg import Odometry
+from sensor_msgs.msg import LaserScan
+import tf
+import math
+
+
+#CONSTANTES DO CONTROLADOR PID------------------------------------------------------
+kp = 0.01
+ki = 0.01
+kd = 0.01
+#-----------------------------------------------------------------------------------
+
+#DEFINICAO VARIAVEIS----------------------------------------------------------------
+odom = Odometry()
+scan = LaserScan()
+#-----------------------------------------------------------------------------------
+
+#INICIALIZACAO DO NO----------------------------------------------------------------
+rospy.init_node('cmd_node')
+#-----------------------------------------------------------------------------------
+
+#FUNCAO QUE RETORNA ANGULO YAW------------------------------------------------------
+def getAngle(msg):
+    #peguei a posicao
+  quaternion = msg.pose.pose.orientation  
+    #da posicao gerei o quaternion
+  quat = [quaternion.x, quaternion.y, quaternion.z, quaternion.]
+    #do quaternion gerei o euler
+  euler = tf.transformations.euler_from_quaternion(quat)
+    #o que eu quero = terceiro angulo de euler em graus
+  yaw = euler[2]*180.0/math.pi
+    #resposta dessa funcao 
+  return yaw
+#-----------------------------------------------------------------------------------
+
+#CALLBACKS--------------------------------------------------------------------------  
+def odomCallBack(msg):
+  global odom
+  odom = msg
+
+def scanCallBack(msg):
+  global scan
+  scan = msg
+#-----------------------------------------------------------------------------------
+
+#TIMER - CONTROLE DO LOOP--------------------------------------------------------------- 
+def timerCallBack(event):
+  yaw = getAngle(odom)
+  setpoint = 120
+  erro = (setpoint - yaw)
+  
+    #faz isso pois se estiver em -170 graus ele giraria no sentido antihorário até chegar em 120 graus
+    #e não pelo jeito mais facil que seria girar no sentido horário até chegar em 120 graus
+  if abs(erro) > 180:
+    erro = -erro
+    
+  P = kp*erro
+  I = 0
+  D = O
+  control = P+I+D
+  
+  msg = Twist()
+  msg.angular.z = control
+  pub.publish(msg)
+#-----------------------------------------------------------------------------------
+
+#PUBLISHER E SUBSCRIBER-------------------------------------------------------------
+pub = rospy.Publisher('/cmd_vel', Twist, queue_size=1)
+odom_sub = rospy.Subscriber('/odom', Odometry, odomCallBack)
+scan_sub = rospy.Subscriber('/scan', LaserScan, scanCallBack)
+
+timer = rospy.Timer(rospy.Duration(0.05), timerCallBack)
+
+rospy.spin()
