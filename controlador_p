@@ -62,6 +62,8 @@ def timerCallBack(event):
         erro -= 360
   """
   
+  
+  
   """
   #distancia do robo ate o setpoint
   setpoint = (-1,-1)
@@ -69,6 +71,8 @@ def timerCallBack(event):
   dist = setpoint[0] - position.x #math.sqrt((setpoint[0]-position.x)**2 + (setpoint[1]-position.y)**2)
   erro = dist
   """
+  
+  
   
   #METODO 1 DE FAZER O CONTROLE ATRAVES DA DISTANCIA DO SENSOR ATÉ  O SETPOINT--------------------------
   #o setpoint pode ser a distância que quer que o robo fique de um obstaculo
@@ -100,17 +104,30 @@ def timerCallBack(event):
     control = -1
   """
   
+  
+  
+  
+  
   #METODO 2 DE FAZER O CONTROLE ATRAVES DA DISTANCIA DO SENSOR ATÉ  O SETPOINT--------------------------
   setpoint = 0.5
   scan_len = len(scan.ranges)
+  
+  timer = rospy.Timer(rospy.Duration(0.05), timerCallBack)
+  TempoTotal += timer
+  dt = TempoTotal - timer      
 
   if scan_len > 0:
     read = min(scan.ranges[scan_len-10 : scan_len+10])
     erro = -(setpoint - read)
+     
     P = kp*erro
-    I = 0
-    D = O
+    #I = I + erro*ki
+    I += (erro*ki)*dt
+    D = ((lastRead - read)*kd)*dt
+    lastRead = read
+    
     control = P+I+D
+    
     if control > 1:
        control = 1
     elif control < -1:
@@ -118,10 +135,7 @@ def timerCallBack(event):
         
   else:
     control = 0
-  
  
-    
-  
   msg = Twist()
   msg.angular.z = control
   pub.publish(msg)
@@ -132,6 +146,5 @@ pub = rospy.Publisher('/cmd_vel', Twist, queue_size=1)
 odom_sub = rospy.Subscriber('/odom', Odometry, odomCallBack)
 scan_sub = rospy.Subscriber('/scan', LaserScan, scanCallBack)
 
-timer = rospy.Timer(rospy.Duration(0.05), timerCallBack)
 
 rospy.spin()
