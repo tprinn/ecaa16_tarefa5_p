@@ -47,6 +47,8 @@ def scanCallBack(msg):
 
 #TIMER - CONTROLE DO LOOP--------------------------------------------------------------- 
 def timerCallBack(event):
+  """
+  #angulo do robo em relacao ao setpoint
   yaw = getAngle(odom)
   setpoint = 120
   erro = (setpoint - yaw)
@@ -54,12 +56,71 @@ def timerCallBack(event):
     #faz isso pois se estiver em -170 graus ele giraria no sentido antihorário até chegar em 120 graus
     #e não pelo jeito mais facil que seria girar no sentido horário até chegar em 120 graus
   if abs(erro) > 180:
-    erro = -erro
-    
+    if setpoint<0
+        erro += 360
+    else:
+        erro -= 360
+  """
+  
+  """
+  #distancia do robo ate o setpoint
+  setpoint = (-1,-1)
+  dist = odom.pose.pose.position
+  dist = setpoint[0] - position.x #math.sqrt((setpoint[0]-position.x)**2 + (setpoint[1]-position.y)**2)
+  erro = dist
+  """
+  
+  #METODO 1 DE FAZER O CONTROLE ATRAVES DA DISTANCIA DO SENSOR ATÉ  O SETPOINT--------------------------
+  #o setpoint pode ser a distância que quer que o robo fique de um obstaculo
+  """
+  #distancia do sensor
+  #a 50cm do objeto
+  setpoint = 0.5
+  #len retorna o comprimento de um vetor
+  scan_len = len(scan.ranges)
+  #para não dar msg de erro pq a lista scan_len está vazia ainda, faz isso
+  if scan_len > 0:
+    #vai pegar a leitura min dos 20 pontos do meio
+    read = min(scan.ranges[scan_len-10 : scan_len+10])
+  else:
+    read = setpoint
+  
+  #colocou o sinal negativo para o robo andar para frente cado o read>setpoint
+  erro = -(setpoint - read)
+  
   P = kp*erro
   I = 0
   D = O
   control = P+I+D
+  
+  #caso mande velocidade mais de 1m/s, limita a velocidade
+  if control > 1:
+    control = 1
+  elif control < -1:
+    control = -1
+  """
+  
+  #METODO 2 DE FAZER O CONTROLE ATRAVES DA DISTANCIA DO SENSOR ATÉ  O SETPOINT--------------------------
+  setpoint = 0.5
+  scan_len = len(scan.ranges)
+
+  if scan_len > 0:
+    read = min(scan.ranges[scan_len-10 : scan_len+10])
+    erro = -(setpoint - read)
+    P = kp*erro
+    I = 0
+    D = O
+    control = P+I+D
+    if control > 1:
+       control = 1
+    elif control < -1:
+       control = -1
+        
+  else:
+    control = 0
+  
+ 
+    
   
   msg = Twist()
   msg.angular.z = control
